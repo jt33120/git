@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     supabase_service_key: str
     openai_api_key: str
     jwt_secret: str = "change-me-in-production"
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "https://git-alpha-hazel.vercel.app"
 
     class Config:
         env_file = ".env"
