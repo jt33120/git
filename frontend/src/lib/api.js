@@ -1,7 +1,11 @@
+
 import axios from 'axios'
 
+const isProd = import.meta.env.PROD;
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: isProd
+    ? 'https://git-production-af3c.up.railway.app'
+    : '/api',
   timeout: 60000, // 60s — AI matching can take time
 })
 
