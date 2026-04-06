@@ -73,15 +73,23 @@ async def register(body: RegisterRequest):
             "email_confirm": True,
         })
 
+        # Check for Supabase errors
+        if hasattr(auth_response, 'error') and auth_response.error:
+            raise HTTPException(status_code=400, detail=f"Supabase error: {auth_response.error.message}")
+        if not hasattr(auth_response, 'user') or not auth_response.user:
+            raise HTTPException(status_code=400, detail=f"Supabase error: No user returned: {auth_response}")
+
         user_id = auth_response.user.id
 
         # Store profile in profiles table
-        supabase.table("profiles").insert({
+        profile_resp = supabase.table("profiles").insert({
             "id": user_id,
             "email": body.email,
             "name": body.name,
             "role": body.role,
         }).execute()
+        if hasattr(profile_resp, 'error') and profile_resp.error:
+            raise HTTPException(status_code=400, detail=f"Supabase profile error: {profile_resp.error.message}")
 
         token = create_token(user_id, body.email, body.role)
 
@@ -96,7 +104,11 @@ async def register(body: RegisterRequest):
         }
 
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         error_msg = str(e)
+        # Log the traceback for debugging (optional: print or log to file)
+        print(f"Signup error: {error_msg}\nTraceback:\n{tb}")
         if "already registered" in error_msg or "already been registered" in error_msg:
             raise HTTPException(status_code=409, detail="Cet email est déjà utilisé")
         raise HTTPException(status_code=400, detail=f"Erreur d'inscription: {error_msg}")

@@ -4,7 +4,7 @@ import axios from 'axios'
 const isProd = import.meta.env.PROD;
 const api = axios.create({
   baseURL: isProd
-    ? 'https://git-production-af3c.up.railway.app'
+    ? (import.meta.env.VITE_API_URL || 'https://git-production-af3c.up.railway.app')
     : '/api',
   timeout: 60000, // 60s — AI matching can take time
 })
