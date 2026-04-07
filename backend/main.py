@@ -10,42 +10,49 @@ app = FastAPI(
     version="0.1.0",
 )
 
-ALLOWED_ORIGINS = [
-    "https://git-alpha-hazel.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
-]
+def is_allowed_origin(origin: str) -> bool:
+    """Check if origin is allowed (production URL, localhost, or Vercel preview)."""
+    if not origin:
+        return False
+    allowed = [
+        "https://git-alpha-hazel.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
+    # Allow exact matches
+    if origin in allowed:
+        return True
+    # Allow all Vercel preview deployments
+    if origin.startswith("https://") and ".vercel.app" in origin:
+        return True
+    return False
 
-# ── Step 1: CORS middleware (inner layer) ─────────────────────
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
-    max_age=600,
-)
-
-# ── Step 2: Manual OPTIONS handler (outer layer — runs FIRST) ─
-# Starlette runs the LAST added middleware FIRST.
-# This intercepts every preflight and returns 200 immediately,
-# before routing or any other handler can produce a 400.
+# ── CORS middleware with dynamic origin checking ──────────────
 @app.middleware("http")
-async def handle_preflight(request: Request, call_next):
+async def cors_middleware(request: Request, call_next):
+    origin = request.headers.get("origin")
+    
+    # Handle preflight OPTIONS requests
     if request.method == "OPTIONS":
-        origin = request.headers.get("origin", "")
-        allowed = origin if origin in ALLOWED_ORIGINS else ALLOWED_ORIGINS[0]
-        return Response(
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin":      allowed,
-                "Access-Control-Allow-Methods":     "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers":     "Authorization, Content-Type, Accept, Origin",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Max-Age":           "600",
-            },
-        )
+        if origin and is_allowed_origin(origin):
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept, Origin",
+                    "Access-Control-Max-Age": "600",
+                },
+            )
+        return Response(status_code=403)
+    
+    # Handle actual requests
     response = await call_next(request)
+    if origin and is_allowed_origin(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    
     return response
 
 # ── Routers ───────────────────────────────────────────────────
