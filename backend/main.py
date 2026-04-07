@@ -9,36 +9,26 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        settings.frontend_url,
         "https://git-alpha-hazel.vercel.app",
         "http://localhost:5173",
-        "http://localhost:3000"
+        "http://localhost:3000",
     ],
-    allow_credentials=True,
+    allow_credentials=True,   # ← obligatoire pour Authorization header
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routers
 app.include_router(auth.router)
 app.include_router(consultants.router)
 app.include_router(aos.router)
 app.include_router(matching.router)
 
-
 @app.get("/")
 def root():
-    return {
-        "app": "G-IT Plateforme Partenaires POC",
-        "version": "0.1.0",
-        "status": "running",
-        "docs": "/docs",
-    }
-
+    return {"app": "G-IT Plateforme Partenaires POC", "version": "0.1.0", "status": "running", "docs": "/docs"}
 
 @app.get("/health")
 def health():
